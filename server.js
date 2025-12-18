@@ -10,11 +10,10 @@ const serverResponse = (req, res, data) => {
   const allowedOrigins = ["https://nta1210.github.io", "http://localhost:5173"];
   const origin = req.headers.origin;
 
-  console.log(origin);
-
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
+  res.setHeader("Vary", "Origin");
 
   res.writeHead(data.status || 200, {
     "Content-Type": "application/json",
@@ -187,5 +186,5 @@ const server = createServer((req, res) => {
 });
 
 server.listen(3000, () => {
-  console.log("Server is running on http://127.0.0.1:3000");
+  console.log("Server is running on http://localhost:3000");
 });
