@@ -168,14 +168,25 @@ const server = createServer((req, res) => {
   // =========================
   if (req.method === "GET" && req.url.startsWith("/bypass-cors")) {
     const urlParams = req.url.split("?")[1];
-    const targetUrl = new URLSearchParams(urlParams).get("url");
+    let targetUrl = new URLSearchParams(urlParams).get("url");
+
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+      targetUrl = "https://" + targetUrl;
+    }
+
+    let isJSON = true;
 
     fetch(targetUrl)
-      .then((response) => response.json())
+      .then((response) => {
+        isJSON = response.headers.get("content-type") === "application/json";
+
+        return isJSON ? response.json() : response.text();
+      })
       .then((data) => {
         serverResponse(req, res, {
           status: 200,
           data: data,
+          isJSON: isJSON,
         });
       });
 
