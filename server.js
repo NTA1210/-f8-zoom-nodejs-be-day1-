@@ -1,10 +1,11 @@
 import { createServer } from "node:http";
+import { readDB, writeDB } from "./utils/jsonDB.js";
 
-const tasks = [
-  { id: 1, title: "Task One", isCompleted: false },
-  { id: 2, title: "Task Two", isCompleted: true },
-  { id: 3, title: "Task Three", isCompleted: false },
-];
+let db = {};
+
+readDB().then((data) => {
+  db = data;
+});
 
 const serverResponse = (req, res, data) => {
   const allowedOrigins = ["https://nta1210.github.io", "http://localhost:5173"];
@@ -57,7 +58,7 @@ const server = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/api/tasks") {
     serverResponse(req, res, {
       status: 200,
-      data: tasks,
+      data: db.tasks || [],
     });
     return;
   }
@@ -67,7 +68,7 @@ const server = createServer((req, res) => {
   // =========================
   if (req.method === "GET" && req.url.startsWith("/api/tasks/")) {
     const id = Number(req.url.split("/").pop());
-    const task = tasks.find((t) => t.id === id);
+    const task = db.tasks.find((t) => t.id === id);
 
     if (task) {
       serverResponse(req, res, {
@@ -94,12 +95,14 @@ const server = createServer((req, res) => {
       const payload = JSON.parse(body);
 
       const newTask = {
-        id: tasks.length + 1,
+        id: db.tasks.length + 1,
         title: payload.title,
         isCompleted: false,
       };
 
-      tasks.push(newTask);
+      db.tasks.push(newTask);
+
+      writeDB(db);
 
       serverResponse(req, res, {
         status: 201,
@@ -123,18 +126,25 @@ const server = createServer((req, res) => {
 
     req.on("end", () => {
       const payload = JSON.parse(body);
-      const index = tasks.findIndex((t) => t.id === id);
+      const index = db.tasks.findIndex((t) => t.id === id);
+
+      const dbTasks = [];
+      readDB().then((data) => {
+        dbTasks = data.tasks;
+      });
 
       if (index !== -1) {
-        tasks[index] = {
-          ...tasks[index],
+        db.tasks[index] = {
+          ...db.tasks[index],
           ...payload,
         };
+
+        writeDB(db);
 
         serverResponse(req, res, {
           status: 200,
           message: "Task updated successfully",
-          data: tasks[index],
+          data: db.tasks[index],
         });
       } else {
         notFoundResponse(req, res);
@@ -148,10 +158,12 @@ const server = createServer((req, res) => {
   // =========================
   if (req.method === "DELETE" && req.url.startsWith("/api/tasks/")) {
     const id = Number(req.url.split("/").pop());
-    const index = tasks.findIndex((t) => t.id === id);
+    const index = db.tasks.findIndex((t) => t.id === id);
 
     if (index !== -1) {
-      tasks.splice(index, 1);
+      db.tasks.splice(index, 1);
+
+      writeDB(db);
 
       serverResponse(req, res, {
         status: 200,
