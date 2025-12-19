@@ -33,7 +33,10 @@ const notFoundResponse = (req, res) => {
 
 const server = createServer((req, res) => {
   if (req.method === "OPTIONS") {
-    const allowedOrigins = ["http://localhost:5173"];
+    const allowedOrigins = [
+      "https://nta1210.github.io",
+      "http://localhost:5173",
+    ];
     const origin = req.headers.origin;
 
     if (allowedOrigins.includes(origin)) {
