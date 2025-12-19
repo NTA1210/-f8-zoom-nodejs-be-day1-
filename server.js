@@ -188,6 +188,12 @@ const server = createServer((req, res) => {
           data: data,
           isJSON: isJSON,
         });
+      })
+      .catch((error) => {
+        serverResponse(req, res, {
+          status: 500,
+          message: error.message,
+        });
       });
 
     return;
