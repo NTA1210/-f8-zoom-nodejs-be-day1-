@@ -178,7 +178,7 @@ const server = createServer((req, res) => {
   // =========================
   // /bypass-cors?url=...
   // =========================
-  if (req.method === "GET" && req.url.startsWith("/bypass-cors")) {
+  if (req.url.startsWith("/bypass-cors")) {
     const urlParams = req.url.split("?")[1];
     let targetUrl = new URLSearchParams(urlParams).get("url");
 
@@ -186,27 +186,50 @@ const server = createServer((req, res) => {
       targetUrl = "https://" + targetUrl;
     }
 
-    let isJSON = true;
+    const isMutable = ["POST", "PUT"].includes(req.method);
+    let body = "";
 
-    fetch(targetUrl)
-      .then((response) => {
-        isJSON = response.headers.get("content-type") === "application/json";
+    const doFetch = () => {
+      fetch(targetUrl, {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          "content-length": body ? Buffer.byteLength(body) : 0,
+        },
+        body: isMutable ? body : undefined,
+      })
+        .then((response) => {
+          const isJSON = response.headers
+            .get("content-type")
+            ?.includes("application/json");
 
-        return isJSON ? response.json() : response.text();
-      })
-      .then((data) => {
-        serverResponse(req, res, {
-          status: 200,
-          data: data,
-          isJSON: isJSON,
+          return isJSON
+            ? response.json()
+            : response.text().then((t) => ({ raw: t }));
+        })
+        .then((data) => {
+          serverResponse(req, res, {
+            status: 200,
+            data,
+          });
+        })
+        .catch((error) => {
+          serverResponse(req, res, {
+            status: 500,
+            message: error.message,
+          });
         });
-      })
-      .catch((error) => {
-        serverResponse(req, res, {
-          status: 500,
-          message: error.message,
-        });
+    };
+
+    if (isMutable) {
+      req.on("data", (chunk) => {
+        body += chunk.toString();
       });
+
+      req.on("end", doFetch);
+    } else {
+      doFetch();
+    }
 
     return;
   }
