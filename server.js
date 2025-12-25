@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { readDB, writeDB } from "./utils/jsonDB.js";
+import { parseBoolean } from "./utils/parseBoolean.js";
 
 let db = {};
 
@@ -55,12 +56,36 @@ const server = createServer((req, res) => {
   // =========================
   // [GET] /api/tasks
   // =========================
-  if (req.method === "GET" && req.url === "/api/tasks") {
-    serverResponse(req, res, {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  if (req.method === "GET" && url.pathname === "/api/tasks") {
+    const params = url.searchParams;
+
+    const title = params.get("title");
+    const isCompleted = params.get("isCompleted");
+
+    if (title) {
+      const tasks = db.tasks.filter((t) => {
+        const isTitleMatch = title
+          ? t.title.toLowerCase().includes(title.toLowerCase())
+          : true;
+        const isCompletedMatch =
+          isCompleted !== null
+            ? t.isCompleted === parseBoolean(isCompleted)
+            : true;
+
+        return isTitleMatch && isCompletedMatch;
+      });
+      return serverResponse(req, res, {
+        status: 200,
+        data: tasks,
+      });
+    }
+
+    return serverResponse(req, res, {
       status: 200,
-      data: db.tasks || [],
+      data: db.tasks,
     });
-    return;
   }
 
   // =========================
