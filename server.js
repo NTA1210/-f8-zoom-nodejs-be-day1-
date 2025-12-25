@@ -141,8 +141,10 @@ const server = createServer((req, res) => {
   // =========================
   // [PUT] /api/tasks/:id
   // =========================
-  if (req.method === "PUT" && req.url.startsWith("/api/tasks/")) {
+  if (req.method === "PATCH" && req.url.startsWith("/api/tasks/")) {
     const id = Number(req.url.split("/").pop());
+    console.log("Updating task with id:", id);
+
     let body = "";
 
     req.on("data", (chunk) => {
@@ -153,7 +155,7 @@ const server = createServer((req, res) => {
       const payload = JSON.parse(body);
       const index = db.tasks.findIndex((t) => t.id === id);
 
-      const dbTasks = [];
+      let dbTasks = [];
       readDB().then((data) => {
         dbTasks = data.tasks;
       });
